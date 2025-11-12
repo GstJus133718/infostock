@@ -1,0 +1,65 @@
+:root {
+    /* Cores principais do projeto InfoStock */
+    --color-blue-light: #CDE7FF;
+    --color-blue-dark: #004685;
+    --color-orange: #F88624;
+    --color-gray: #F0F0F0;
+    --color-red: #851F00;
+    --color-green: #008543;
+    
+    /* Variações das cores principais */
+    --color-blue-light-50: #f0f8ff;
+    --color-blue-light-100: #CDE7FF;
+    --color-blue-light-200: #b3d9ff;
+    
+    --color-blue-dark-50: #e6f1ff;
+    --color-blue-dark-100: #cce3ff;
+    --color-blue-dark-500: #004685;
+    --color-blue-dark-600: #003d75;
+    --color-blue-dark-700: #003366;
+    
+    --color-orange-50: #fff7ed;
+    --color-orange-100: #ffedd5;
+    --color-orange-500: #F88624;
+    --color-orange-600: #ea7c0d;
+    --color-orange-700: #c2610c;
+    
+    --color-gray-50: #f9f9f9;
+    --color-gray-100: #F0F0F0;
+    --color-gray-200: #e5e5e5;
+    --color-gray-300: #d4d4d4;
+    --color-gray-400: #a3a3a3;
+    --color-gray-500: #737373;
+    --color-gray-600: #525252;
+    --color-gray-700: #404040;
+    --color-gray-800: #262626;
+    --color-gray-900: #171717;
+    
+    --color-red-50: #fef2f2;
+    --color-red-100: #fee2e2;
+    --color-red-500: #851F00;
+    --color-red-600: #7a1c00;
+    --color-red-700: #6f1900;
+    
+    --color-green-50: #f0fdf4;
+    --color-green-100: #dcfce7;
+    --color-green-500: #008543;
+    --color-green-600: #007a3d;
+    --color-green-700: #006f37;
+    
+    /* Cores de estado */
+    --color-success: var(--color-green);
+    --color-warning: var(--color-orange);
+    --color-error: var(--color-red);
+    --color-info: var(--color-blue-dark);
+    
+    /* Cores de texto */
+    --text-primary: var(--color-gray-900);
+    --text-secondary: var(--color-gray-600);
+    --text-muted: var(--color-gray-400);
+    
+    /* Cores de fundo */
+    --bg-primary: #ffffff;
+    --bg-secondary: var(--color-gray);
+    --bg-accent: var(--color-blue-light);
+  }
