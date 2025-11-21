@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -17,82 +17,57 @@ import {
     User
 } from 'lucide-react';
 import LogoInfostock from '../../assets/logo_infostock.png';
+import { useClients, useSuppliers } from '../../hooks';
+import { formatCPF, formatCNPJ, formatPhone, formatDate } from '../../utils/formatters';
+import { getUser } from '../../utils/auth';
 
 const InfoStock = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('clients');
     const [activeSection, setActiveSection] = useState('Fornecedores');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const currentUser = getUser();
 
-    // Dados dos clientes
-    const clients = [
-        {
-            id: 1,
-            name: 'João Silva Santos',
-            cpfCnpj: '123.456.789-00',
-            email: 'joao.silva@email.com',
-            phone: '(11) 99999-1234',
-            address: 'Rua das Flores, 123 - São Paulo/SP',
-            birthDate: '1985-03-15',
-            status: 'Ativo'
-        },
-        {
-            id: 2,
-            name: 'Maria Oliveira',
-            cpfCnpj: '987.654.321-00',
-            email: 'maria.oliveira@email.com',
-            phone: '(11) 88888-5678',
-            address: 'Av. Paulista, 456 - São Paulo/SP',
-            birthDate: '1990-07-22',
-            status: 'Ativo'
-        },
-        {
-            id: 3,
-            name: 'Tech Solutions LTDA',
-            cpfCnpj: '12.345.678/0001-90',
-            email: 'contato@techsolutions.com',
-            phone: '(11) 3333-4567',
-            address: 'Rua da Tecnologia, 789 - São Paulo/SP',
-            birthDate: '2010-01-10',
-            status: 'Ativo'
-        }
-    ];
+    // Hooks de API
+    const { clients, loading: loadingClients, fetchClients } = useClients();
+    const { suppliers, loading: loadingSuppliers, fetchSuppliers } = useSuppliers();
 
-    // Dados dos fornecedores
-    const suppliers = [
-        {
-            id: 1,
-            name: 'Gigabyte Technology',
-            cpfCnpj: '11.222.333/0001-44',
-            email: 'vendas@gigabyte.com.br',
-            phone: '(11) 4444-5555',
-            status: 'Ativo'
-        },
-        {
-            id: 2,
-            name: 'Kingston Technology',
-            cpfCnpj: '22.333.444/0001-55',
-            email: 'comercial@kingston.com.br',
-            phone: '(11) 5555-6666',
-            status: 'Ativo'
-        },
-        {
-            id: 3,
-            name: 'NVIDIA Corporation',
-            cpfCnpj: '33.444.555/0001-66',
-            email: 'partners@nvidia.com.br',
-            phone: '(11) 6666-7777',
-            status: 'Inativo'
-        },
-        {
-            id: 4,
-            name: 'AMD Brasil',
-            cpfCnpj: '44.555.666/0001-77',
-            email: 'vendas@amd.com.br',
-            phone: '(11) 7777-8888',
-            status: 'Ativo'
-        }
-    ];
+    // Carregar dados ao montar o componente
+    useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true);
+            await Promise.all([
+                fetchClients(),
+                fetchSuppliers()
+            ]);
+            setIsLoading(false);
+        };
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Filtrar clientes pela busca
+    const filteredClients = clients.filter(client => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            client.nome?.toLowerCase().includes(searchLower) ||
+            client.email?.toLowerCase().includes(searchLower) ||
+            client.cpf?.includes(searchTerm) ||
+            client.cnpj?.includes(searchTerm)
+        );
+    });
+
+    // Filtrar fornecedores pela busca
+    const filteredSuppliers = suppliers.filter(supplier => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            supplier.nome?.toLowerCase().includes(searchLower) ||
+            supplier.email?.toLowerCase().includes(searchLower) ||
+            supplier.cnpj?.includes(searchTerm)
+        );
+    });
 
     // Componente Sidebar Responsivo
     const Sidebar = ({ active, onNavigate }) => {
@@ -207,186 +182,233 @@ const InfoStock = () => {
     };
 
     // Componente Tabela de Clientes
-    const ClientsTable = () => (
-        <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-neutral-200 bg-neutral-50">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-                    <h3 className="text-base lg:text-lg font-semibold text-neutral-900">Lista de Clientes</h3>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:gap-3">
-                        <div className="relative flex-1 sm:flex-none">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar clientes..."
-                                className="w-full sm:w-auto pl-10 pr-4 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            />
-                        </div>
-                        <button className="flex items-center justify-center px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50">
-                            <Filter className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Filtrar</span>
-                        </button>
-                        <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
-                            <Plus className="h-4 w-4 mr-1 lg:mr-2" />
-                            <span className="hidden sm:inline">Novo Cliente</span>
-                            <span className="sm:hidden">Novo</span>
-                        </button>
+    const ClientsTable = () => {
+        if (loadingClients || isLoading) {
+            return (
+                <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 p-8 flex justify-center items-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+                        <p className="text-neutral-600">Carregando clientes...</p>
                     </div>
                 </div>
-            </div>
+            );
+        }
 
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[1000px]">
-                    <thead className="bg-neutral-50 border-b border-neutral-200">
-                        <tr>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">ID</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Nome</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">CPF/CNPJ</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Email</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Telefone</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Endereço</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Data de Nascimento</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Status</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-neutral-200">
-                        {clients.map((client) => (
-                            <tr key={client.id} className="hover:bg-neutral-50 transition-colors duration-150">
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
-                                    #{client.id.toString().padStart(3, '0')}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="w-8 lg:w-10 h-8 lg:h-10 bg-neutral-200 rounded-lg mr-2 lg:mr-3 flex items-center justify-center">
-                                            <User className="h-4 lg:h-5 w-4 lg:w-5 text-neutral-500" />
-                                        </div>
-                                        <div className="text-xs lg:text-sm font-medium text-neutral-900">
-                                            {client.name}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {client.cpfCnpj}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {client.email}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {client.phone}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900 max-w-[200px] truncate">
-                                    {client.address}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {new Date(client.birthDate).toLocaleDateString('pt-BR')}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success-100 text-success-700">
-                                        {client.status}
-                                    </span>
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
-                                    <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                        <Edit className="h-3 w-3 mr-1" />
-                                        Editar
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+        return (
+            <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-neutral-200 bg-neutral-50">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
+                        <h3 className="text-base lg:text-lg font-semibold text-neutral-900">Lista de Clientes</h3>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:gap-3">
+                            <div className="relative flex-1 sm:flex-none">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar clientes..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full sm:w-auto pl-10 pr-4 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                />
+                            </div>
+                            <button className="flex items-center justify-center px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50">
+                                <Filter className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">Filtrar</span>
+                            </button>
+                            <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
+                                <Plus className="h-4 w-4 mr-1 lg:mr-2" />
+                                <span className="hidden sm:inline">Novo Cliente</span>
+                                <span className="sm:hidden">Novo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {filteredClients.length === 0 ? (
+                        <div className="p-8 text-center text-neutral-500">
+                            {searchTerm ? 'Nenhum cliente encontrado com esse termo de busca.' : 'Nenhum cliente cadastrado.'}
+                        </div>
+                    ) : (
+                        <table className="w-full min-w-[1000px]">
+                            <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <tr>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">ID</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Nome</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">CPF/CNPJ</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Email</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Telefone</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Endereço</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Data de Nascimento</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Status</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-neutral-200">
+                                {filteredClients.map((client) => {
+                                    const cpfCnpj = client.cpf ? formatCPF(client.cpf) : (client.cnpj ? formatCNPJ(client.cnpj) : '-');
+                                    const endereco = client.endereco ? `${client.endereco}, ${client.numero || ''} - ${client.cidade}/${client.estado}` : '-';
+
+                                    return (
+                                        <tr key={client.ID} className="hover:bg-neutral-50 transition-colors duration-150">
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
+                                                #{client.ID.toString().padStart(3, '0')}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="w-8 lg:w-10 h-8 lg:h-10 bg-neutral-200 rounded-lg mr-2 lg:mr-3 flex items-center justify-center">
+                                                        <User className="h-4 lg:h-5 w-4 lg:w-5 text-neutral-500" />
+                                                    </div>
+                                                    <div className="text-xs lg:text-sm font-medium text-neutral-900">
+                                                        {client.nome}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                                {cpfCnpj}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                                {client.email || '-'}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                                {client.telefone ? formatPhone(client.telefone) : '-'}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900 max-w-[200px] truncate">
+                                                {endereco}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                                {client.data_nascimento ? formatDate(client.data_nascimento) : '-'}
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                                    client.status ? 'bg-success-100 text-success-700' : 'bg-danger-100 text-danger-700'
+                                                }`}>
+                                                    {client.status? 'Ativo' : 'Inativo'}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
+                                                <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                                    <Edit className="h-3 w-3 mr-1" />
+                                                    Editar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Componente Tabela de Fornecedores
-    const SuppliersTable = () => (
-        <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-neutral-200 bg-neutral-50">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-                    <h3 className="text-base lg:text-lg font-semibold text-neutral-900">Lista de Fornecedores</h3>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:gap-3">
-                        <div className="relative flex-1 sm:flex-none">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar fornecedores..."
-                                className="w-full sm:w-auto pl-10 pr-4 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            />
-                        </div>
-                        <button className="flex items-center justify-center px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50">
-                            <Filter className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Filtrar</span>
-                        </button>
-                        <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
-                            <Plus className="h-4 w-4 mr-1 lg:mr-2" />
-                            <span className="hidden sm:inline">Novo Fornecedor</span>
-                            <span className="sm:hidden">Novo</span>
-                        </button>
+    const SuppliersTable = () => {
+        if (loadingSuppliers || isLoading) {
+            return (
+                <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 p-8 flex justify-center items-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+                        <p className="text-neutral-600">Carregando fornecedores...</p>
                     </div>
                 </div>
-            </div>
+            );
+        }
 
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]">
-                    <thead className="bg-neutral-50 border-b border-neutral-200">
-                        <tr>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">ID</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Nome</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">CPF/CNPJ</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Email</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Telefone</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Status</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-neutral-200">
-                        {suppliers.map((supplier) => (
-                            <tr key={supplier.id} className="hover:bg-neutral-50 transition-colors duration-150">
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
-                                    #{supplier.id.toString().padStart(3, '0')}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="w-8 lg:w-10 h-8 lg:h-10 bg-neutral-200 rounded-lg mr-2 lg:mr-3 flex items-center justify-center">
-                                            <Building2 className="h-4 lg:h-5 w-4 lg:w-5 text-neutral-500" />
-                                        </div>
-                                        <div className="text-xs lg:text-sm font-medium text-neutral-900">
-                                            {supplier.name}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {supplier.cpfCnpj}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {supplier.email}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                    {supplier.phone}
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        supplier.status === 'Ativo' 
-                                            ? 'bg-success-100 text-success-700' 
-                                            : 'bg-danger-100 text-danger-700'
-                                    }`}>
-                                        {supplier.status}
-                                    </span>
-                                </td>
-                                <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
-                                    <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                        <Edit className="h-3 w-3 mr-1" />
-                                        Editar
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+        return (
+            <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-neutral-200 bg-neutral-50">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
+                        <h3 className="text-base lg:text-lg font-semibold text-neutral-900">Lista de Fornecedores</h3>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:gap-3">
+                            <div className="relative flex-1 sm:flex-none">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar fornecedores..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full sm:w-auto pl-10 pr-4 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                />
+                            </div>
+                            <button className="flex items-center justify-center px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50">
+                                <Filter className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">Filtrar</span>
+                            </button>
+                            <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
+                                <Plus className="h-4 w-4 mr-1 lg:mr-2" />
+                                <span className="hidden sm:inline">Novo Fornecedor</span>
+                                <span className="sm:hidden">Novo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {filteredSuppliers.length === 0 ? (
+                        <div className="p-8 text-center text-neutral-500">
+                            {searchTerm ? 'Nenhum fornecedor encontrado com esse termo de busca.' : 'Nenhum fornecedor cadastrado.'}
+                        </div>
+                    ) : (
+                        <table className="w-full min-w-[800px]">
+                            <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <tr>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">ID</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Nome</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">CNPJ</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Email</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Telefone</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Status</th>
+                                    <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-neutral-700 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-neutral-200">
+                                {filteredSuppliers.map((supplier) => (
+                                    <tr key={supplier.ID} className="hover:bg-neutral-50 transition-colors duration-150">
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
+                                            #{supplier.ID.toString().padStart(3, '0')}
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="w-8 lg:w-10 h-8 lg:h-10 bg-neutral-200 rounded-lg mr-2 lg:mr-3 flex items-center justify-center">
+                                                    <Building2 className="h-4 lg:h-5 w-4 lg:w-5 text-neutral-500" />
+                                                </div>
+                                                <div className="text-xs lg:text-sm font-medium text-neutral-900">
+                                                    {supplier.nome}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                            {supplier.cnpj ? formatCNPJ(supplier.cnpj) : '-'}
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                            {supplier.email || '-'}
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                            {supplier.telefone ? formatPhone(supplier.telefone) : '-'}
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                                supplier.status ? 'bg-success-100 text-success-700' : 'bg-danger-100 text-danger-700'
+                                            }`}>
+                                                {supplier.status ? 'Ativo' : 'Inativo'}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
+                                            <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                                <Edit className="h-3 w-3 mr-1" />
+                                                Editar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const handleNavigation = (section) => {
         setActiveSection(section);
@@ -426,11 +448,13 @@ const InfoStock = () => {
 
                         <div className="flex items-center space-x-2 lg:space-x-3">
                             <div className="text-right hidden sm:block">
-                                <p className="text-xs lg:text-sm font-semibold text-neutral-900">Admin</p>
-                                <p className="text-xs text-neutral-500">Administrador</p>
+                                <p className="text-xs lg:text-sm font-semibold text-neutral-900">{currentUser?.nome || 'Usuário'}</p>
+                                <p className="text-xs text-neutral-500">{currentUser?.perfil || 'N/A'}</p>
                             </div>
                             <div className="h-8 lg:h-10 w-8 lg:w-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-md">
-                                <span className="text-xs lg:text-sm font-bold text-white">AD</span>
+                                <span className="text-xs lg:text-sm font-bold text-white">
+                                    {currentUser?.nome?.substring(0, 2).toUpperCase() || 'U'}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -441,21 +465,21 @@ const InfoStock = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6 mb-6 lg:mb-8">
                         <InfoCard
                             title="Total de Clientes"
-                            value={clients.length.toString()}
+                            value={isLoading ? '...' : clients.length.toString()}
                             icon={UserCheck}
                             bgColor="bg-primary-100"
                             iconColor="text-primary-600"
                         />
                         <InfoCard
                             title="Total de Fornecedores"
-                            value={suppliers.length.toString()}
+                            value={isLoading ? '...' : suppliers.length.toString()}
                             icon={Building2}
                             bgColor="bg-primary-100"
                             iconColor="text-primary-600"
                         />
                         <InfoCard
                             title="Fornecedores Ativos"
-                            value={suppliers.filter(s => s.status === 'Ativo').length.toString()}
+                            value={isLoading ? '...' : suppliers.filter(s => s.ativo).length.toString()}
                             icon={Users}
                             bgColor="bg-primary-100"
                             iconColor="text-primary-600"
