@@ -98,11 +98,14 @@ export const useSales = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Hook useSales - Enviando para API:', saleData);
       const response = await api.post('/vendas', saleData);
-      await fetchSales(); // Atualiza a lista
+      console.log('Hook useSales - Resposta da API:', response.data);
       return { success: true, data: response.data };
     } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Erro ao criar venda';
+      console.error('Hook useSales - Erro:', err);
+      console.error('Hook useSales - Resposta de erro:', err.response?.data);
+      const errorMessage = err.response?.data?.erro || err.response?.data?.error || err.response?.data?.detalhes || 'Erro ao criar venda';
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {

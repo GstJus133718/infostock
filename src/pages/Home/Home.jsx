@@ -16,11 +16,12 @@ import {
     Bell,
     Menu,
     X,
-    RefreshCw
+    RefreshCw,
+    LogOut
 } from 'lucide-react';
 import LogoInfostock from '../../assets/logo_infostock.png';
 import { useDashboard } from '../../hooks/useDashboard';
-import { getUser, isAuthenticated } from '../../utils/auth';
+import { getUser, isAuthenticated, logout } from '../../utils/auth';
 import { formatCurrency } from '../../utils/formatters';
 
 // Gráfico de Vendas Mensais (Barras)
@@ -247,7 +248,7 @@ const Home = () => {
         const navItems = [
             { name: 'Dashboard', icon: LayoutDashboard, current: active === 'Dashboard', path: '/home' },
             { name: 'Produtos', icon: Package, current: active === 'Produtos', path: '/products' },
-            { name: 'Fornecedores', icon: Users, current: active === 'Fornecedores', path: '/suppliers' },
+            { name: 'Parceiros', icon: Users, current: active === 'Parceiros', path: '/suppliers' },
             { name: 'Vendas', icon: ShoppingCart, current: active === 'Vendas', path: '/sales' },
         ];
 
@@ -299,6 +300,19 @@ const Home = () => {
                             </button>
                         ))}
                     </nav>
+
+                    <div className="px-3 lg:px-4 py-4 border-t border-neutral-200">
+                        <button
+                            onClick={() => {
+                                logout();
+                                navigate('/login');
+                            }}
+                            className="w-full flex items-center px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-sm font-semibold transition-all duration-200 text-danger-600 hover:bg-danger-50 hover:transform hover:scale-105"
+                        >
+                            <LogOut className="mr-2 lg:mr-3 h-4 lg:h-5 w-4 lg:w-5" />
+                            <span className="text-xs lg:text-sm">Sair</span>
+                        </button>
+                    </div>
                 </div>
             </>
         );

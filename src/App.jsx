@@ -4,6 +4,7 @@ import Home from './pages/Home/Home';
 import Products from './pages/Products/Products';
 import Customers from './pages/Suppliers/Customers';
 import Sales from './pages/Sales/Sales';
+import SalesHistory from './pages/Sales/SalesHistory';
 import Relatorios from './pages/Relatorios/Relatorios';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
@@ -44,6 +45,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Sales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales/history"
+            element={
+              <ProtectedRoute>
+                <SalesHistory />
               </ProtectedRoute>
             }
           />

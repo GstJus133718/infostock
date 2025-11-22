@@ -7,3 +7,4 @@ export { useStock } from './useStock';
 export { useSuppliers } from './useSuppliers';
 export { useUsers } from './useUsers';
 export { useDashboard } from './useDashboard';
+export { useNotasFiscais } from './useNotasFiscais';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -20,14 +20,240 @@ import {
     ArrowDown,
     RefreshCw,
     Edit2,
-    Trash2
+    Trash2,
+    LogOut
 } from 'lucide-react';
 import LogoInfostock from '../../assets/logo_infostock.png';
 import { useProducts } from '../../hooks/useProducts';
 import { useStock } from '../../hooks/useStock';
 import { useSuppliers } from '../../hooks/useSuppliers';
-import { getUser, isAuthenticated, hasPermission } from '../../utils/auth';
+import { getUser, isAuthenticated, hasPermission, logout } from '../../utils/auth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+
+// Modal de Produto - Componente Otimizado
+const ProductModal = React.memo(({ 
+    show, 
+    onClose, 
+    productForm, 
+    onFormChange, 
+    onSubmit, 
+    isEditing 
+}) => {
+    if (!show) return null;
+
+    const handleInputChange = useCallback((field, value) => {
+        onFormChange({ ...productForm, [field]: value });
+    }, [productForm, onFormChange]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-neutral-200">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">{isEditing ? 'Editar Produto' : 'Novo Produto'}</h3>
+                        <button onClick={onClose}>
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">SKU *</label>
+                            <input
+                                type="text"
+                                value={productForm.sku}
+                                onChange={(e) => handleInputChange('sku', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Nome *</label>
+                            <input
+                                type="text"
+                                value={productForm.nome}
+                                onChange={(e) => handleInputChange('nome', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Categoria *</label>
+                            <input
+                                type="text"
+                                value={productForm.categoria}
+                                onChange={(e) => handleInputChange('categoria', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Marca</label>
+                            <input
+                                type="text"
+                                value={productForm.marca}
+                                onChange={(e) => handleInputChange('marca', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Modelo</label>
+                            <input
+                                type="text"
+                                value={productForm.modelo}
+                                onChange={(e) => handleInputChange('modelo', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Preço *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={productForm.preco}
+                                onChange={(e) => handleInputChange('preco', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Garantia (meses)</label>
+                            <input
+                                type="number"
+                                value={productForm.garantia}
+                                onChange={(e) => handleInputChange('garantia', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
+                            <select
+                                value={productForm.status}
+                                onChange={(e) => handleInputChange('status', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            >
+                                <option value="ATIVO">ATIVO</option>
+                                <option value="INATIVO">INATIVO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                        >
+                            {isEditing ? 'Atualizar' : 'Criar'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+});
+
+ProductModal.displayName = 'ProductModal';
+
+// Modal de Estoque - Componente Otimizado
+const StockModal = React.memo(({ 
+    show, 
+    onClose, 
+    stockForm, 
+    onFormChange, 
+    onSubmit, 
+    operation 
+}) => {
+    if (!show || !operation.product) return null;
+
+    const handleInputChange = useCallback((field, value) => {
+        onFormChange({ ...stockForm, [field]: value });
+    }, [stockForm, onFormChange]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl max-w-md w-full">
+                <div className="p-6 border-b border-neutral-200">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">
+                            {operation.type === 'entrada' ? 'Entrada de Estoque' : 'Saída de Estoque'}
+                        </h3>
+                        <button onClick={onClose}>
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
+                    <p className="text-sm text-neutral-600 mt-2">{operation.product.nome}</p>
+                </div>
+
+                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Quantidade *</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={stockForm.quantidade}
+                            onChange={(e) => handleInputChange('quantidade', e.target.value)}
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Origem *</label>
+                        <select
+                            value={stockForm.origem}
+                            onChange={(e) => handleInputChange('origem', e.target.value)}
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        >
+                            {operation.type === 'entrada' ? (
+                                <>
+                                    <option value="COMPRA_FORNECEDOR">Compra de Fornecedor</option>
+                                    <option value="DEVOLUCAO">Devolução</option>
+                                    <option value="AJUSTE_INVENTARIO">Ajuste de Inventário</option>
+                                </>
+                            ) : (
+                                <>
+                                    <option value="VENDA">Venda</option>
+                                    <option value="AJUSTE_INVENTARIO">Ajuste de Inventário</option>
+                                    <option value="PERDA">Perda</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className={`px-4 py-2 text-white rounded-lg ${
+                                operation.type === 'entrada'
+                                    ? 'bg-success-500 hover:bg-success-600'
+                                    : 'bg-danger-500 hover:bg-danger-600'
+                            }`}
+                        >
+                            Confirmar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+});
+
+StockModal.displayName = 'StockModal';
 
 const Products = () => {
     const navigate = useNavigate();
@@ -79,16 +305,23 @@ const Products = () => {
 
     // Estatísticas calculadas
     const stats = {
-        totalValue: products.reduce((sum, p) => sum + (p.preco * p.estoque?.quantidade_atual || 0), 0),
-        totalProducts: products.reduce((sum, p) => sum + (p.estoque?.quantidade_atual || 0), 0),
-        categories: [...new Set(products.map(p => p.categoria))].length
+        totalValue: (products || []).reduce((sum, p) => {
+            const preco = parseFloat(p?.preco) || 0;
+            const qtd = parseInt(p?.quantidade_estoque) || 0;
+            return sum + (preco * qtd);
+        }, 0),
+        totalProducts: (products || []).reduce((sum, p) => {
+            const qtd = parseInt(p?.quantidade_estoque) || 0;
+            return sum + qtd;
+        }, 0),
+        categories: [...new Set((products || []).map(p => p?.categoria).filter(Boolean))].length
     };
 
     const Sidebar = ({ active, onNavigate }) => {
         const navItems = [
             { name: 'Dashboard', icon: LayoutDashboard, current: active === 'Dashboard', path: '/home' },
             { name: 'Produtos', icon: Package, current: active === 'Produtos', path: '/products' },
-            { name: 'Fornecedores', icon: Users, current: active === 'Fornecedores', path: '/suppliers' },
+            { name: 'Parceiros', icon: Users, current: active === 'Parceiros', path: '/suppliers' },
             { name: 'Vendas', icon: ShoppingCart, current: active === 'Vendas', path: '/sales' },
         ];
 
@@ -143,6 +376,19 @@ const Products = () => {
                             </button>
                         ))}
                     </nav>
+
+                    <div className="px-3 lg:px-4 py-4 border-t border-neutral-200">
+                        <button
+                            onClick={() => {
+                                logout();
+                                navigate('/login');
+                            }}
+                            className="w-full flex items-center px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-sm font-semibold transition-all duration-200 text-danger-600 hover:bg-danger-50 hover:transform hover:scale-105"
+                        >
+                            <LogOut className="mr-2 lg:mr-3 h-4 lg:h-5 w-4 lg:w-5" />
+                            <span className="text-xs lg:text-sm">Sair</span>
+                        </button>
+                    </div>
                 </div>
             </>
         );
@@ -196,7 +442,7 @@ const Products = () => {
         );
     };
 
-    const handleProductSubmit = async (e) => {
+    const handleProductSubmit = useCallback(async (e) => {
         e.preventDefault();
 
         const data = {
@@ -213,31 +459,56 @@ const Products = () => {
         }
 
         if (result.success) {
+            alert(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso! O estoque foi criado automaticamente com quantidade = 0.');
             setShowProductModal(false);
             resetProductForm();
             await fetchProducts();
+        } else {
+            alert(`Erro: ${result.error}`);
         }
-    };
+    }, [productForm, editingProduct, createProduct, updateProduct, fetchProducts]);
 
-    const handleStockSubmit = async (e) => {
+    const handleStockSubmit = useCallback(async (e) => {
         e.preventDefault();
 
         const quantidade = parseInt(stockForm.quantidade);
         const { product, type } = stockOperation;
+        const productId = product.id || product.ID;
 
         let result;
         if (type === 'entrada') {
-            result = await addStock(product.ID, quantidade, stockForm.origem);
+            result = await addStock(productId, quantidade, stockForm.origem);
         } else {
-            result = await removeStock(product.ID, quantidade, stockForm.origem);
+            result = await removeStock(productId, quantidade, stockForm.origem);
         }
 
         if (result.success) {
+            alert(`${type === 'entrada' ? 'Entrada' : 'Saída'} de estoque registrada com sucesso! Quantidade: ${quantidade} unidades.`);
             setShowStockModal(false);
             resetStockForm();
             await Promise.all([fetchProducts(), fetchMovements()]);
+        } else {
+            alert(`Erro ao registrar ${type === 'entrada' ? 'entrada' : 'saída'}: ${result.error}`);
         }
-    };
+    }, [stockForm, stockOperation, addStock, removeStock, fetchProducts, fetchMovements]);
+
+    const handleProductFormChange = useCallback((newForm) => {
+        setProductForm(newForm);
+    }, []);
+
+    const handleStockFormChange = useCallback((newForm) => {
+        setStockForm(newForm);
+    }, []);
+
+    const handleCloseProductModal = useCallback(() => {
+        setShowProductModal(false);
+        resetProductForm();
+    }, []);
+
+    const handleCloseStockModal = useCallback(() => {
+        setShowStockModal(false);
+        resetStockForm();
+    }, []);
 
     const resetProductForm = () => {
         setProductForm({
@@ -262,7 +533,8 @@ const Products = () => {
     };
 
     const handleEdit = (product) => {
-        setEditingProduct(product);
+        const productId = product.id || product.ID;
+        setEditingProduct({ ...product, ID: productId }); // Normalizar para ID maiúsculo
         setProductForm({
             sku: product.sku,
             nome: product.nome,
@@ -290,10 +562,10 @@ const Products = () => {
         setShowStockModal(true);
     };
 
-    const filteredProducts = products.filter(product =>
-        product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProducts = (products || []).filter(product =>
+        (product?.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product?.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product?.categoria || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const VisualizationTable = () => (
@@ -357,10 +629,16 @@ const Products = () => {
                                 </td>
                             </tr>
                         ) : (
-                            filteredProducts.map((product) => (
-                                <tr key={product.ID} className="hover:bg-neutral-50 transition-colors duration-150">
+                            filteredProducts.map((product) => {
+                                // Validação de segurança para evitar erros
+                                // Backend retorna 'id' minúsculo, não 'ID' maiúsculo
+                                const productId = product.id || product.ID;
+                                if (!product || !productId) return null;
+                                
+                                return (
+                                <tr key={productId} className="hover:bg-neutral-50 transition-colors duration-150">
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
-                                        #{product.ID.toString().padStart(3, '0')}
+                                        #{productId.toString().padStart(3, '0')}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
                                         <div className="flex items-center">
@@ -368,12 +646,12 @@ const Products = () => {
                                                 <Package className="h-4 lg:h-5 w-4 lg:w-5 text-neutral-500" />
                                             </div>
                                             <div className="text-xs lg:text-sm font-medium text-neutral-900">
-                                                {product.nome}
+                                                {product.nome || 'Sem nome'}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                        {product.categoria}
+                                        {product.categoria || '-'}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
                                         {product.fornecedores && product.fornecedores.length > 0
@@ -381,34 +659,47 @@ const Products = () => {
                                             : '-'}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                        {product.estoque?.quantidade_atual || 0}
+                                        {product.quantidade_estoque || 0}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                        {formatCurrency(product.preco)}
+                                        {formatCurrency(product.preco || 0)}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
-                                        {formatCurrency(product.preco * (product.estoque?.quantidade_atual || 0))}
+                                        {formatCurrency((product.preco || 0) * (product.quantidade_estoque || 0))}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
                                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success-100 text-success-700">
-                                            {product.status}
+                                            {product.status || 'ATIVO'}
                                         </span>
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
                                         <div className="flex gap-2">
                                             {hasPermission(['ADMIN', 'GERENTE']) && (
-                                                <button
-                                                    onClick={() => handleEdit(product)}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-primary-500 hover:bg-primary-600"
-                                                >
-                                                    <Edit2 className="h-3 w-3 mr-1" />
-                                                    Editar
-                                                </button>
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEdit(product)}
+                                                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-primary-500 hover:bg-primary-600"
+                                                        title="Editar produto"
+                                                    >
+                                                        <Edit2 className="h-3 w-3 mr-1" />
+                                                        Editar
+                                                    </button>
+                                                    {hasPermission(['ADMIN']) && (
+                                                        <button
+                                                            onClick={() => handleDelete(productId)}
+                                                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-danger-500 hover:bg-danger-600"
+                                                            title="Deletar produto"
+                                                        >
+                                                            <Trash2 className="h-3 w-3 mr-1" />
+                                                            Deletar
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </td>
                                 </tr>
-                            ))
+                            )})
                         )}
                     </tbody>
                 </table>
@@ -424,12 +715,14 @@ const Products = () => {
             </div>
 
             <div className="space-y-4">
-                {filteredProducts.map((product) => (
-                    <div key={product.ID} className="border border-neutral-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                {filteredProducts.map((product) => {
+                    const productId = product.id || product.ID;
+                    return (
+                    <div key={productId} className="border border-neutral-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-center">
                             <div className="flex-1">
                                 <h4 className="font-semibold text-neutral-900">{product.nome}</h4>
-                                <p className="text-sm text-neutral-600">SKU: {product.sku} | Estoque: {product.estoque?.quantidade_atual || 0}</p>
+                                <p className="text-sm text-neutral-600">SKU: {product.sku} | Estoque: {product.quantidade_estoque || 0}</p>
                             </div>
                             {hasPermission(['ADMIN', 'GERENTE']) && (
                                 <div className="flex gap-2">
@@ -451,7 +744,7 @@ const Products = () => {
                             )}
                         </div>
                     </div>
-                ))}
+                )})}
             </div>
         </div>
     );
@@ -460,23 +753,25 @@ const Products = () => {
         <div className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
             <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-neutral-200 bg-neutral-50">
                 <h3 className="text-base lg:text-lg font-semibold text-neutral-900">Movimentações do Estoque</h3>
+                <p className="text-xs lg:text-sm text-neutral-600 mt-1">Histórico completo de entradas e saídas</p>
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
+                <table className="w-full min-w-[1000px]">
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                         <tr>
                             <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Tipo</th>
                             <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Produto</th>
                             <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Quantidade</th>
-                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Data</th>
                             <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Origem</th>
+                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Usuário</th>
+                            <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Data</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-neutral-200">
                         {movements.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-neutral-500">
+                                <td colSpan="6" className="px-6 py-8 text-center text-neutral-500">
                                     Nenhuma movimentação encontrada
                                 </td>
                             </tr>
@@ -495,14 +790,17 @@ const Products = () => {
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
                                         {movement.produto?.nome || '-'}
                                     </td>
-                                    <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                    <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-neutral-900">
                                         {movement.quantidade}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                        {formatDate(movement.CreatedAt)}
+                                        {movement.origem}
                                     </td>
                                     <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
-                                        {movement.origem}
+                                        {movement.usuario?.nome || '-'}
+                                    </td>
+                                    <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-neutral-900">
+                                        {formatDate(movement.data_movimentacao || movement.CreatedAt)}
                                     </td>
                                 </tr>
                             ))
@@ -511,201 +809,6 @@ const Products = () => {
                 </table>
             </div>
         </div>
-    );
-
-    // Modal de Produto
-    const ProductModal = () => (
-        showProductModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="p-6 border-b border-neutral-200">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-semibold">{editingProduct ? 'Editar Produto' : 'Novo Produto'}</h3>
-                            <button onClick={() => { setShowProductModal(false); resetProductForm(); }}>
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleProductSubmit} className="p-6 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">SKU *</label>
-                                <input
-                                    type="text"
-                                    value={productForm.sku}
-                                    onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Nome *</label>
-                                <input
-                                    type="text"
-                                    value={productForm.nome}
-                                    onChange={(e) => setProductForm({ ...productForm, nome: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Categoria *</label>
-                                <input
-                                    type="text"
-                                    value={productForm.categoria}
-                                    onChange={(e) => setProductForm({ ...productForm, categoria: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Marca</label>
-                                <input
-                                    type="text"
-                                    value={productForm.marca}
-                                    onChange={(e) => setProductForm({ ...productForm, marca: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Modelo</label>
-                                <input
-                                    type="text"
-                                    value={productForm.modelo}
-                                    onChange={(e) => setProductForm({ ...productForm, modelo: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Preço *</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={productForm.preco}
-                                    onChange={(e) => setProductForm({ ...productForm, preco: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Garantia (meses)</label>
-                                <input
-                                    type="number"
-                                    value={productForm.garantia}
-                                    onChange={(e) => setProductForm({ ...productForm, garantia: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
-                                <select
-                                    value={productForm.status}
-                                    onChange={(e) => setProductForm({ ...productForm, status: e.target.value })}
-                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                >
-                                    <option value="ATIVO">ATIVO</option>
-                                    <option value="INATIVO">INATIVO</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                            <button
-                                type="button"
-                                onClick={() => { setShowProductModal(false); resetProductForm(); }}
-                                className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-                            >
-                                {editingProduct ? 'Atualizar' : 'Criar'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )
-    );
-
-    // Modal de Estoque
-    const StockModal = () => (
-        showStockModal && stockOperation.product && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl max-w-md w-full">
-                    <div className="p-6 border-b border-neutral-200">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-semibold">
-                                {stockOperation.type === 'entrada' ? 'Entrada de Estoque' : 'Saída de Estoque'}
-                            </h3>
-                            <button onClick={() => { setShowStockModal(false); resetStockForm(); }}>
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-                        <p className="text-sm text-neutral-600 mt-2">{stockOperation.product.nome}</p>
-                    </div>
-
-                    <form onSubmit={handleStockSubmit} className="p-6 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">Quantidade *</label>
-                            <input
-                                type="number"
-                                min="1"
-                                value={stockForm.quantidade}
-                                onChange={(e) => setStockForm({ ...stockForm, quantidade: e.target.value })}
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">Origem *</label>
-                            <select
-                                value={stockForm.origem}
-                                onChange={(e) => setStockForm({ ...stockForm, origem: e.target.value })}
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                            >
-                                {stockOperation.type === 'entrada' ? (
-                                    <>
-                                        <option value="COMPRA_FORNECEDOR">Compra de Fornecedor</option>
-                                        <option value="DEVOLUCAO">Devolução</option>
-                                        <option value="AJUSTE_INVENTARIO">Ajuste de Inventário</option>
-                                    </>
-                                ) : (
-                                    <>
-                                        <option value="VENDA">Venda</option>
-                                        <option value="AJUSTE_INVENTARIO">Ajuste de Inventário</option>
-                                        <option value="PERDA">Perda</option>
-                                    </>
-                                )}
-                            </select>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                            <button
-                                type="button"
-                                onClick={() => { setShowStockModal(false); resetStockForm(); }}
-                                className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                className={`px-4 py-2 text-white rounded-lg ${
-                                    stockOperation.type === 'entrada'
-                                        ? 'bg-success-500 hover:bg-success-600'
-                                        : 'bg-danger-500 hover:bg-danger-600'
-                                }`}
-                            >
-                                Confirmar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )
     );
 
     const handleNavigation = (section) => {
@@ -787,8 +890,22 @@ const Products = () => {
                 </main>
             </div>
 
-            <ProductModal />
-            <StockModal />
+            <ProductModal 
+                show={showProductModal}
+                onClose={handleCloseProductModal}
+                productForm={productForm}
+                onFormChange={handleProductFormChange}
+                onSubmit={handleProductSubmit}
+                isEditing={!!editingProduct}
+            />
+            <StockModal 
+                show={showStockModal}
+                onClose={handleCloseStockModal}
+                stockForm={stockForm}
+                onFormChange={handleStockFormChange}
+                onSubmit={handleStockSubmit}
+                operation={stockOperation}
+            />
         </div>
     );
 };

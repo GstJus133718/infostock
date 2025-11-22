@@ -184,16 +184,6 @@ const Login = () => {
               </button>
             </div>
           </form>
-
-          {/* Informações de Teste */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs font-semibold text-blue-800 mb-2">Usuários de Teste:</p>
-            <div className="space-y-1 text-xs text-blue-700">
-              <p><strong>Admin:</strong> admin@infostock.com / admin123</p>
-              <p><strong>Gerente:</strong> gerente@infostock.com / admin123</p>
-              <p><strong>Vendedor:</strong> vendedor@infostock.com / admin123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

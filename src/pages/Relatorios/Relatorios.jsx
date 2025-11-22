@@ -88,7 +88,7 @@ const Relatorios = () => {
         const navItems = [
             { name: 'Dashboard', icon: LayoutDashboard, current: active === 'Dashboard', path: '/home' },
             { name: 'Produtos', icon: Package, current: active === 'Produtos', path: '/products' },
-            { name: 'Fornecedores', icon: Users, current: active === 'Fornecedores', path: '/suppliers' },
+            { name: 'Parceiros', icon: Users, current: active === 'Parceiros', path: '/suppliers' },
             { name: 'Vendas', icon: ShoppingCart, current: active === 'Vendas', path: '/sales' },
             { name: 'Relatórios', icon: FileText, current: active === 'Relatórios', path: '/reports' },
         ];

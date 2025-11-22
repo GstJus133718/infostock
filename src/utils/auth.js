@@ -19,6 +19,10 @@ export const clearAuth = () => {
   localStorage.removeItem('user');
 };
 
+export const logout = () => {
+  clearAuth();
+};
+
 export const isAuthenticated = () => {
   return !!getToken();
 };

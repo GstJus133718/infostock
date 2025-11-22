@@ -14,25 +14,349 @@ import {
     Bell,
     Menu,
     X,
-    User
+    User,
+    LogOut
 } from 'lucide-react';
 import LogoInfostock from '../../assets/logo_infostock.png';
 import { useClients, useSuppliers } from '../../hooks';
 import { formatCPF, formatCNPJ, formatPhone, formatDate } from '../../utils/formatters';
-import { getUser } from '../../utils/auth';
+import { getUser, logout } from '../../utils/auth';
+
+// Modal de Cliente - Componente Otimizado
+const ClientModal = React.memo(({ 
+    show, 
+    onClose, 
+    clientForm, 
+    onFormChange, 
+    onSubmit, 
+    isEditing 
+}) => {
+    if (!show) return null;
+
+    const handleInputChange = (field, value) => {
+        onFormChange({ ...clientForm, [field]: value });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-neutral-200">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+                        <button onClick={onClose}>
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Tipo de Pessoa *</label>
+                            <select
+                                value={clientForm.tipo_pessoa}
+                                onChange={(e) => handleInputChange('tipo_pessoa', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            >
+                                <option value="FISICA">Pessoa Física</option>
+                                <option value="JURIDICA">Pessoa Jurídica</option>
+                            </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Nome Completo *</label>
+                            <input
+                                type="text"
+                                value={clientForm.nome}
+                                onChange={(e) => handleInputChange('nome', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+
+                        {clientForm.tipo_pessoa === 'FISICA' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 mb-2">CPF *</label>
+                                <input
+                                    type="text"
+                                    value={clientForm.cpf}
+                                    onChange={(e) => handleInputChange('cpf', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000.000.000-00"
+                                    maxLength="11"
+                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                    required={clientForm.tipo_pessoa === 'FISICA'}
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 mb-2">CNPJ *</label>
+                                <input
+                                    type="text"
+                                    value={clientForm.cnpj}
+                                    onChange={(e) => handleInputChange('cnpj', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="00.000.000/0000-00"
+                                    maxLength="14"
+                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                    required={clientForm.tipo_pessoa === 'JURIDICA'}
+                                />
+                            </div>
+                        )}
+
+                        {clientForm.tipo_pessoa === 'FISICA' && (
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 mb-2">Data de Nascimento</label>
+                                <input
+                                    type="date"
+                                    value={clientForm.data_nascimento}
+                                    onChange={(e) => handleInputChange('data_nascimento', e.target.value)}
+                                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                />
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
+                            <input
+                                type="email"
+                                value={clientForm.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Telefone</label>
+                            <input
+                                type="text"
+                                value={clientForm.telefone}
+                                onChange={(e) => handleInputChange('telefone', e.target.value.replace(/\D/g, ''))}
+                                placeholder="(00) 00000-0000"
+                                maxLength="11"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Endereço</label>
+                            <input
+                                type="text"
+                                value={clientForm.endereco}
+                                onChange={(e) => handleInputChange('endereco', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Cidade</label>
+                            <input
+                                type="text"
+                                value={clientForm.cidade}
+                                onChange={(e) => handleInputChange('cidade', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Estado</label>
+                            <input
+                                type="text"
+                                value={clientForm.estado}
+                                onChange={(e) => handleInputChange('estado', e.target.value.toUpperCase())}
+                                placeholder="SP"
+                                maxLength="2"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">CEP</label>
+                            <input
+                                type="text"
+                                value={clientForm.cep}
+                                onChange={(e) => handleInputChange('cep', e.target.value.replace(/\D/g, ''))}
+                                placeholder="00000-000"
+                                maxLength="8"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
+                            <select
+                                value={clientForm.status}
+                                onChange={(e) => handleInputChange('status', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            >
+                                <option value="ATIVO">ATIVO</option>
+                                <option value="INATIVO">INATIVO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                        >
+                            {isEditing ? 'Atualizar' : 'Criar'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+});
+
+ClientModal.displayName = 'ClientModal';
+
+// Modal de Fornecedor - Componente Otimizado
+const SupplierModal = React.memo(({ 
+    show, 
+    onClose, 
+    supplierForm, 
+    onFormChange, 
+    onSubmit, 
+    isEditing 
+}) => {
+    if (!show) return null;
+
+    const handleInputChange = (field, value) => {
+        onFormChange({ ...supplierForm, [field]: value });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-neutral-200">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">{isEditing ? 'Editar Fornecedor' : 'Novo Fornecedor'}</h3>
+                        <button onClick={onClose}>
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Nome da Empresa *</label>
+                            <input
+                                type="text"
+                                value={supplierForm.nome}
+                                onChange={(e) => handleInputChange('nome', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">CNPJ *</label>
+                            <input
+                                type="text"
+                                value={supplierForm.cnpj}
+                                onChange={(e) => handleInputChange('cnpj', e.target.value.replace(/\D/g, ''))}
+                                placeholder="00.000.000/0000-00"
+                                maxLength="14"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Contato *</label>
+                            <input
+                                type="text"
+                                value={supplierForm.contato}
+                                onChange={(e) => handleInputChange('contato', e.target.value)}
+                                placeholder="(00) 0000-0000"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
+                            <select
+                                value={supplierForm.status}
+                                onChange={(e) => handleInputChange('status', e.target.value)}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            >
+                                <option value="ATIVO">ATIVO</option>
+                                <option value="INATIVO">INATIVO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                        >
+                            {isEditing ? 'Atualizar' : 'Criar'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+});
+
+SupplierModal.displayName = 'SupplierModal';
 
 const InfoStock = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('clients');
-    const [activeSection, setActiveSection] = useState('Fornecedores');
+    const [activeSection, setActiveSection] = useState('Parceiros');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [showClientModal, setShowClientModal] = useState(false);
+    const [showSupplierModal, setShowSupplierModal] = useState(false);
+    const [editingClient, setEditingClient] = useState(null);
+    const [editingSupplier, setEditingSupplier] = useState(null);
     const currentUser = getUser();
 
     // Hooks de API
-    const { clients, loading: loadingClients, fetchClients } = useClients();
-    const { suppliers, loading: loadingSuppliers, fetchSuppliers } = useSuppliers();
+    const { clients, loading: loadingClients, fetchClients, createClient, updateClient } = useClients();
+    const { suppliers, loading: loadingSuppliers, fetchSuppliers, createSupplier, updateSupplier } = useSuppliers();
+
+    // Formulários
+    const [clientForm, setClientForm] = useState({
+        nome: '',
+        cpf: '',
+        cnpj: '',
+        tipo_pessoa: 'FISICA',
+        email: '',
+        telefone: '',
+        data_nascimento: '',
+        endereco: '',
+        cidade: '',
+        estado: '',
+        cep: '',
+        status: 'ATIVO'
+    });
+
+    const [supplierForm, setSupplierForm] = useState({
+        nome: '',
+        cnpj: '',
+        contato: '',
+        status: 'ATIVO'
+    });
 
     // Carregar dados ao montar o componente
     useEffect(() => {
@@ -47,6 +371,128 @@ const InfoStock = () => {
         loadData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Handlers de formulários
+    const handleClientSubmit = async (e) => {
+        e.preventDefault();
+
+        // Preparar dados conforme tipo de pessoa
+        const data = {
+            ...clientForm,
+            cpf: clientForm.tipo_pessoa === 'FISICA' ? clientForm.cpf : '',
+            cnpj: clientForm.tipo_pessoa === 'JURIDICA' ? clientForm.cnpj : '',
+            // Converter data de nascimento para formato ISO 8601 se existir
+            data_nascimento: clientForm.data_nascimento 
+                ? new Date(clientForm.data_nascimento + 'T00:00:00Z').toISOString() 
+                : ''
+        };
+
+        let result;
+        if (editingClient) {
+            result = await updateClient(editingClient.ID, data);
+        } else {
+            result = await createClient(data);
+        }
+
+        if (result.success) {
+            alert(editingClient ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
+            setShowClientModal(false);
+            resetClientForm();
+            await fetchClients();
+        } else {
+            alert(`Erro: ${result.error}`);
+        }
+    };
+
+    const handleSupplierSubmit = async (e) => {
+        e.preventDefault();
+
+        let result;
+        if (editingSupplier) {
+            result = await updateSupplier(editingSupplier.ID, supplierForm);
+        } else {
+            result = await createSupplier(supplierForm);
+        }
+
+        if (result.success) {
+            alert(editingSupplier ? 'Fornecedor atualizado com sucesso!' : 'Fornecedor cadastrado com sucesso!');
+            setShowSupplierModal(false);
+            resetSupplierForm();
+            await fetchSuppliers();
+        } else {
+            alert(`Erro: ${result.error}`);
+        }
+    };
+
+    const resetClientForm = () => {
+        setClientForm({
+            nome: '',
+            cpf: '',
+            cnpj: '',
+            tipo_pessoa: 'FISICA',
+            email: '',
+            telefone: '',
+            data_nascimento: '',
+            endereco: '',
+            cidade: '',
+            estado: '',
+            cep: '',
+            status: 'ATIVO'
+        });
+        setEditingClient(null);
+    };
+
+    const resetSupplierForm = () => {
+        setSupplierForm({
+            nome: '',
+            cnpj: '',
+            contato: '',
+            status: 'ATIVO'
+        });
+        setEditingSupplier(null);
+    };
+
+    const handleEditClient = (client) => {
+        setEditingClient(client);
+        
+        // Converter data ISO para formato YYYY-MM-DD para o input date
+        let dataNascimento = '';
+        if (client.data_nascimento) {
+            try {
+                const date = new Date(client.data_nascimento);
+                dataNascimento = date.toISOString().split('T')[0];
+            } catch (e) {
+                console.error('Erro ao converter data:', e);
+            }
+        }
+        
+        setClientForm({
+            nome: client.nome,
+            cpf: client.cpf || '',
+            cnpj: client.cnpj || '',
+            tipo_pessoa: client.tipo_pessoa || 'FISICA',
+            email: client.email || '',
+            telefone: client.telefone || '',
+            data_nascimento: dataNascimento,
+            endereco: client.endereco || '',
+            cidade: client.cidade || '',
+            estado: client.estado || '',
+            cep: client.cep || '',
+            status: client.status || 'ATIVO'
+        });
+        setShowClientModal(true);
+    };
+
+    const handleEditSupplier = (supplier) => {
+        setEditingSupplier(supplier);
+        setSupplierForm({
+            nome: supplier.nome,
+            cnpj: supplier.cnpj || '',
+            contato: supplier.contato || '',
+            status: supplier.status || 'ATIVO'
+        });
+        setShowSupplierModal(true);
+    };
 
     // Filtrar clientes pela busca
     const filteredClients = clients.filter(client => {
@@ -74,7 +520,7 @@ const InfoStock = () => {
         const navItems = [
             { name: 'Dashboard', icon: LayoutDashboard, current: active === 'Dashboard', path: '/home' },
             { name: 'Produtos', icon: Package, current: active === 'Produtos', path: '/products' },
-            { name: 'Fornecedores', icon: Users, current: active === 'Fornecedores', path: '/suppliers' },
+            { name: 'Parceiros', icon: Users, current: active === 'Parceiros', path: '/suppliers' },
             { name: 'Vendas', icon: ShoppingCart, current: active === 'Vendas', path: '/sales' },
         ];
 
@@ -131,6 +577,19 @@ const InfoStock = () => {
                             </button>
                         ))}
                     </nav>
+
+                    <div className="px-3 lg:px-4 py-4 border-t border-neutral-200">
+                        <button
+                            onClick={() => {
+                                logout();
+                                navigate('/login');
+                            }}
+                            className="w-full flex items-center px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-sm font-semibold transition-all duration-200 text-danger-600 hover:bg-danger-50 hover:transform hover:scale-105"
+                        >
+                            <LogOut className="mr-2 lg:mr-3 h-4 lg:h-5 w-4 lg:w-5" />
+                            <span className="text-xs lg:text-sm">Sair</span>
+                        </button>
+                    </div>
                 </div>
             </>
         );
@@ -214,7 +673,10 @@ const InfoStock = () => {
                                 <Filter className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Filtrar</span>
                             </button>
-                            <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
+                            <button 
+                                onClick={() => setShowClientModal(true)}
+                                className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600"
+                            >
                                 <Plus className="h-4 w-4 mr-1 lg:mr-2" />
                                 <span className="hidden sm:inline">Novo Cliente</span>
                                 <span className="sm:hidden">Novo</span>
@@ -286,7 +748,10 @@ const InfoStock = () => {
                                                 </span>
                                             </td>
                                             <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
-                                                <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                                <button 
+                                                    onClick={() => handleEditClient(client)}
+                                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                                >
                                                     <Edit className="h-3 w-3 mr-1" />
                                                     Editar
                                                 </button>
@@ -335,7 +800,10 @@ const InfoStock = () => {
                                 <Filter className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Filtrar</span>
                             </button>
-                            <button className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600">
+                            <button 
+                                onClick={() => setShowSupplierModal(true)}
+                                className="flex items-center justify-center px-3 lg:px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600"
+                            >
                                 <Plus className="h-4 w-4 mr-1 lg:mr-2" />
                                 <span className="hidden sm:inline">Novo Fornecedor</span>
                                 <span className="sm:hidden">Novo</span>
@@ -395,7 +863,10 @@ const InfoStock = () => {
                                             </span>
                                         </td>
                                         <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm font-medium">
-                                            <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                            <button 
+                                                onClick={() => handleEditSupplier(supplier)}
+                                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                            >
                                                 <Edit className="h-3 w-3 mr-1" />
                                                 Editar
                                             </button>
@@ -417,7 +888,7 @@ const InfoStock = () => {
             const routes = {
                 'Dashboard': '/',
                 'Produtos': '/products',
-                'Fornecedores': '/suppliers',
+                'Parceiros': '/suppliers',
                 'Vendas': '/sales'
             };
             
@@ -496,6 +967,30 @@ const InfoStock = () => {
                     </div>
                 </main>
             </div>
+
+            {/* Modais */}
+            <ClientModal 
+                show={showClientModal}
+                onClose={() => {
+                    setShowClientModal(false);
+                    resetClientForm();
+                }}
+                clientForm={clientForm}
+                onFormChange={setClientForm}
+                onSubmit={handleClientSubmit}
+                isEditing={!!editingClient}
+            />
+            <SupplierModal 
+                show={showSupplierModal}
+                onClose={() => {
+                    setShowSupplierModal(false);
+                    resetSupplierForm();
+                }}
+                supplierForm={supplierForm}
+                onFormChange={setSupplierForm}
+                onSubmit={handleSupplierSubmit}
+                isEditing={!!editingSupplier}
+            />
         </div>
     );
 };
