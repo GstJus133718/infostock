@@ -1,12 +1,13 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login/Login';
 import Home from './pages/Home/Home';
 import Products from './pages/Products/Products';
 import Customers from './pages/Suppliers/Customers';
 import Sales from './pages/Sales/Sales';
-import './index.css';
+import SalesHistory from './pages/Sales/SalesHistory';
 import Relatorios from './pages/Relatorios/Relatorios';
+import ProtectedRoute from './components/ProtectedRoute';
+import './index.css';
 
 function App() {
   return (
@@ -15,12 +16,54 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/suppliers" element={<Customers />} />
-          <Route path="/sales" element={<Sales />} />
-          <Route path="/relatorios" element={<Relatorios />} />
-          {/* Outras rotas serão adicionadas aqui */}
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/suppliers"
+            element={
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales"
+            element={
+              <ProtectedRoute>
+                <Sales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales/history"
+            element={
+              <ProtectedRoute>
+                <SalesHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/relatorios"
+            element={
+              <ProtectedRoute>
+                <Relatorios />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>
