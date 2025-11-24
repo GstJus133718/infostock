@@ -32,7 +32,7 @@ const Vendas = () => {
 
     const { clients, fetchClients } = useClients();
     const { products, fetchProducts } = useProducts();
-    const { sales, fetchSales, createSale, confirmSale } = useSales();
+    const { sales, fetchSales, createSale } = useSales();
 
     useEffect(() => {
         console.log('Current User:', currentUser);
@@ -132,20 +132,29 @@ const Vendas = () => {
     };
 
     const addToCart = (product) => {
-        const existingItem = cartItems.find(item => item.produto_id === product.ID);
+        console.log('Adicionando produto ao carrinho:', product);
+        console.log('produto.ID:', product.ID);
+        console.log('produto.id:', product.id);
+
+        const produtoId = product.ID || product.id;
+        console.log('produtoId final:', produtoId);
+
+        const existingItem = cartItems.find(item => item.produto_id === produtoId);
 
         if (existingItem) {
             setCartItems(cartItems.map(item =>
-                item.produto_id === product.ID
+                item.produto_id === produtoId
                     ? { ...item, quantidade: item.quantidade + 1 }
                     : item
             ));
         } else {
-            setCartItems([...cartItems, {
-                produto_id: product.ID,
+            const newItem = {
+                produto_id: produtoId,
                 produto: product,
                 quantidade: 1
-            }]);
+            };
+            console.log('Novo item adicionado:', newItem);
+            setCartItems([...cartItems, newItem]);
         }
     };
 
@@ -185,13 +194,18 @@ const Vendas = () => {
 
         setIsLoading(true);
         try {
+            console.log('Estado do carrinho antes de enviar:', cartItems);
+
             const vendaData = {
                 usuario_id: userId,
                 cliente_id: selectedClient.ID,
-                itens: cartItems.map(item => ({
-                    produto_id: item.produto_id,
-                    quantidade: item.quantidade
-                }))
+                itens: cartItems.map(item => {
+                    console.log('Mapeando item:', item);
+                    return {
+                        produto_id: item.produto_id,
+                        quantidade: item.quantidade
+                    };
+                })
             };
 
             console.log('Enviando venda:', JSON.stringify(vendaData, null, 2));
@@ -199,17 +213,11 @@ const Vendas = () => {
             const result = await createSale(vendaData);
 
             if (result.success) {
-                const confirmarResult = await confirmSale(result.data.ID);
-
-                if (confirmarResult.success) {
-                    alert('Venda criada, confirmada e nota fiscal gerada com sucesso!');
-                    setCartItems([]);
-                    setSelectedClient(null);
-                    setClientSearch('');
-                    await fetchSales();
-                } else {
-                    alert(`Erro ao confirmar venda: ${confirmarResult.error}`);
-                }
+                alert('Venda criada e nota fiscal gerada com sucesso!');
+                setCartItems([]);
+                setSelectedClient(null);
+                setClientSearch('');
+                await fetchSales();
             } else {
                 alert(`Erro ao criar venda: ${result.error}`);
             }
